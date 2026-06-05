@@ -3,6 +3,15 @@
 TickETH is an end-to-end Web3 ticketing platform built for event organizers and attendees.
 It combines smart-contract based NFT tickets, a secure backend API, a Next.js web client, and an Expo mobile app with QR check-in support.
 
+## Core Features
+
+- Wallet-based authentication with SIWE
+- Event creation and management workflows for organizers
+- NFT ticket minting and ownership tracking
+- Secondary marketplace listing and sale flows
+- QR ticket scanning and real-time check-in confirmation
+- Admin and support tooling for moderation and issue resolution
+
 ## What Is Included
 
 - `backend/`: NestJS API for auth, events, ticketing, marketplace, check-in, audit logs, and background jobs
@@ -104,6 +113,16 @@ Deploy examples:
 npm run deploy:local
 npm run deploy:amoy
 ```
+
+## Typical Development Workflow
+
+1. Start Redis and make sure Supabase env values are configured.
+2. Run backend (`backend`) and frontend (`frontend`) first.
+3. Compile/deploy contracts (`contracts`) to your target network.
+4. Add deployed contract addresses to backend/frontend/mobile environment config.
+5. Start mobile app (`mobile`) and validate minting/check-in end to end.
+
+For local iterations, keep backend and frontend in watch/dev mode while running contract tests independently.
 
 ## Environment Setup
 
