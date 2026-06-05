@@ -1,0 +1,78 @@
+{
+  "expo": {
+    "name": "TickETH",
+    "slug": "ticketh",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "ticketh",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D0D0D"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ticketh.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "TickETH needs camera access to scan ticket QR codes",
+        "UIBackgroundModes": ["remote-notification"]
+      }
+    },
+    "android": {
+      "package": "com.ticketh.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0D0D0D"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TickETH needs camera access to scan ticket QR codes"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#6C63FF"
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://192.168.0.234:3001/api/v1",
+      "supabaseUrl": "https://guwmmoblrigolynranuy.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1d21tb2Jscmlnb2x5bnJhbnV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNDg3NTcsImV4cCI6MjA4NjgyNDc1N30.YMawLLfQAxIwcu5av8Mizw_w_JXWppeSy0CAreqRzXM",
+      "polygonAmoyRpcUrl": "https://rpc-amoy.polygon.technology",
+      "polygonMainnetRpcUrl": "https://polygon-rpc.com",
+      "walletConnectProjectId": "",
+      "requireExplicitLogin": true,
+      "chainId": 80002,
+      "factoryAddress": "0x8E0237fed96693c36c5A5021A6893b7B9F3494B2",
+      "marketplaceAddress": "0x828bE7efB199b867684bE502A8e93F817697a543",
+      "implementationAddress": "0x164d162Da6edF739A0bCd610FBd5d808c165870e",
+      "platformTreasury": "0x1194CD63491865d684A4619b785129230F018730",
+      "pinataGateway": "https://gateway.pinata.cloud/ipfs",
+      "chainListenerEnabled": true,
+      "chainListenerStartBlock": 0,
+      "eas": {
+        "projectId": "ticketh-mobile"
+      }
+    }
+  }
+}

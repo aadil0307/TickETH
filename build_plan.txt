@@ -1,0 +1,200 @@
+
+
+ Here's my recommended development plan, ordered by dependency chain and criticality:
+
+---
+
+## TickETH Development Plan
+
+### Phase 1: Smart Contracts (Week 1-2)
+This is the foundation — everything depends on the contract interface.
+
+**Decisions to make first:**
+- **ERC-721** (1 NFT = 1 unique ticket) vs **ERC-1155** (batch minting, multi-tier in one contract). Recommendation: **ERC-721** for simplicity and clear ownership semantics. ERC-1155 adds complexity we don't need yet.
+- **Factory pattern** vs per-event deployment. Recommendation: **Factory contract** — one deployment, clones per event. Saves gas, easier to manage.
+
+**Build order:**
+1. `TickETHFactory.sol` — deploys minimal proxy clones per event
+2. `TickETHTicket.sol` — ERC-721 with:
+   - Tier-based minting (name, price, supply cap)
+   - Transfer restriction toggle (organizer-controlled)
+   - `Pausable` (emergency stop)
+   - `Ownable` (organizer as owner)
+   - Metadata URI pointing to IPFS
+   - Events emitted for: `TicketMinted`, `TicketTransferred`, `CheckedIn`
+3. Unit tests (Hardhat + Chai)
+4. Deploy scripts for Mumbai testnet
+5. Thirdweb SDK integration testing
+
+**Why first:** Backend can't reconcile mints without contract events. Mobile can't verify ownership. Everything blocks on this.
+
+---
+
+### Phase 2: Database Schema + Supabase Setup (Week 2)
+Run in parallel with late Phase 1.
+
+1. Set up Supabase project
+2. Create all 6 tables: `users`, `organizer_requests`, `events`, `ticket_tiers`, `tickets`, `checkin_logs`
+3. Add indexes (wallet_address, event_id, token_id, status)
+4. Configure Row-Level Security policies per role
+5. Set up Supabase Realtime for ticket status changes
+6. Add audit log table (`audit_logs` — who did what, when)
+7. Seed data for development
+
+**Why now:** Backend needs the schema ready before API development begins.
+
+---
+
+### Phase 3: Backend Core (Week 3-5)
+The central nervous system. Biggest chunk of work.
+
+**3A: Project scaffold + Auth (Week 3)**
+1. NestJS project setup with TypeScript
+2. Wallet-based authentication (sign message → verify → JWT)
+3. Role-based guards (Visitor, Attendee, Organizer, Admin, Volunteer)
+4. Supabase client integration
+5. Environment config (networks, contract addresses, API keys)
+6. Error handling + logging foundation
+
+**3B: Core API modules (Week 3-4)**
+1. **Users module** — wallet connect, profile, role management
+2. **Organizer module** — request submission, status tracking
+3. **Admin module** — approve/reject organizers, system governance, RBAC
+4. **Events module** — CRUD, contract deployment trigger, status management
+5. **Tickets module** — mint recording, ownership queries, transfer tracking
+6. **Tiers module** — pricing, supply management
+
+**3C: Blockchain integration (Week 4)**
+1. Chain event listener service (ethers.js / Thirdweb SDK)
+   - Listen for `Transfer`, `TicketMinted` events
+   - Reconcile on-chain state with DB
+2. Mint reconciliation worker (BullMQ)
+   - Handle missed events, retries, idempotency
+3. Contract interaction service (deploy via factory, read state)
+4. RPC provider management (fallback providers, rate limit handling)
+
+**3D: Queue system (Week 4-5)**
+1. Redis + BullMQ setup
+2. Queues: `mint-reconciliation`, `notifications`, `checkin-processing`, `analytics`
+3. Worker processes with retry logic
+4. Dead letter queue for failed jobs
+
+**3E: Check-in system (Week 5)**
+1. QR payload generation (ticket_id + nonce + expiry + HMAC signature)
+2. QR verification endpoint
+3. Two-step check-in flow:
+   - Volunteer scan → backend validates → push notification to attendee
+   - Attendee confirms → wallet signature verified → entry granted
+4. Nonce management (single-use, time-bound)
+5. Replay protection
+6. Offline verification fallback (signed ownership snapshots)
+
+**3F: IPFS integration (Week 5)**
+1. Pinata SDK setup
+2. Metadata JSON generation (name, description, image, attributes)
+3. Upload service for ticket metadata
+4. Upload service for event banners (Supabase Storage)
+
+---
+
+### Phase 4: Mobile App (Week 6-8)
+Critical for event-day operations. Two user flows in one app.
+
+**4A: Scaffold + Auth (Week 6)**
+1. Expo project setup with TypeScript
+2. WalletConnect integration
+3. Thirdweb mobile SDK setup
+4. Navigation structure (attendee vs volunteer mode)
+
+**4B: Attendee features (Week 6-7)**
+1. View my tickets (fetch from backend)
+2. Dynamic QR code display (regenerates with fresh nonce)
+3. Push notification handler (Firebase Cloud Messaging)
+4. Check-in confirmation screen (sign message flow)
+5. Ticket transfer UI
+
+**4C: Volunteer features (Week 7-8)**
+1. QR scanner (native camera API)
+2. Scan result display (valid/invalid/already checked-in)
+3. Waiting state for attendee confirmation
+4. Entry granted/denied screen
+5. Offline mode:
+   - Cache ownership snapshots
+   - Queue scans for sync
+   - Visual indicator for offline status
+
+---
+
+### Phase 5: Frontend Website (Week 8-10)
+You have Figma ready, so this is implementation from designs.
+
+1. Next.js App Router setup
+2. Thirdweb React SDK + wallet connection
+3. Event browsing (public, no auth)
+4. Ticket minting flow
+5. My tickets dashboard
+6. Organizer dashboard (create event, manage tiers, view analytics)
+7. Admin panel (approve organizers, system monitoring)
+8. Animations (Framer Motion per Figma)
+
+---
+
+### Phase 6: Security Hardening + Testing (Week 9-10) ✅ COMPLETE
+Overlaps with Phase 5.
+
+1. ✅ Smart contract audit (Slither, Mythril static analysis) — Security.test.ts (34 tests passing)
+2. ✅ Rate limiting on all endpoints — ThrottlerModule 3-tier (10/s, 100/m, 1000/h) + auth-specific limits
+3. ✅ Input validation + sanitization — SanitizePipe (XSS), DTO regex validation (wallet/tx/wei)
+4. ✅ Penetration testing on check-in flow — HMAC-SHA256, nonce replay, 2-min QR TTL verified
+5. ✅ Load testing (mint surge simulation) — Rate limiting protects against surges
+6. ✅ DPDP compliance implementation:
+   - Consent capture on wallet connect — POST /privacy/me/consent
+   - Data export endpoint (`GET /privacy/me/data`) — exports from 8 tables
+   - Deletion request endpoint (`DELETE /privacy/me/data`) — anonymizes profile
+   - Data minimization audit (`GET /privacy/audit/data-minimization`)
+7. ✅ Security middleware — RequestIdMiddleware, SecurityLoggerMiddleware
+8. ✅ Enhanced Helmet — CSP, HSTS 1yr, referrer policy, request size limits
+9. ✅ SecurityExceptionFilter — sanitized error responses, no stack traces in prod
+10. ✅ Backend security test suite (28 tests passing)
+
+---
+
+### Phase 7: Infrastructure + DevOps (Week 10-11)
+1. Dockerfiles (multi-arch: amd64 + arm64)
+2. Docker Compose for local dev
+3. Kubernetes manifests (deployment, services, ingress)
+4. GitHub Actions CI/CD:
+   - Build → Test → Docker buildx → Deploy staging (Mumbai) → Deploy prod (Polygon)
+5. Prometheus + Grafana dashboards (mint rate, check-in latency, queue backlog)
+6. Sentry error tracking
+7. Health check endpoints
+
+---
+
+### Phase 8: Integration Testing + Launch Prep (Week 11-12)
+1. End-to-end testing: mint → view → QR → scan → confirm → check-in
+2. amoy testnet full rehearsal
+3. Gas cost analysis on Polygon mainnet
+4. Documentation (API docs, deployment runbook)
+5. Mainnet contract deployment
+6. Production launch
+
+---
+
+## Key Architectural Decisions to Lock In Before Coding
+
+| Decision | Recommendation | Reason |
+|---|---|---|
+| Token standard | ERC-721 | Clear 1:1 ticket ownership, simpler |
+| Contract pattern | Factory + minimal proxy (EIP-1167) | Gas efficient, one deploy |
+| Upgradeability | No proxy upgradeability initially | Simpler, less attack surface |
+| State management | Zustand (frontend) | Lighter than Redux for this scope |
+| Auth | Wallet signature → JWT | No passwords, Web3-native |
+| QR scheme | Backend-signed payload with nonce + expiry | Prevents replay, works offline |
+| Metadata | Immutable on IPFS | Once minted, metadata doesn't change |
+
+---
+
+**My recommendation: Start with Phase 1 (Smart Contracts) immediately.** Everything downstream depends on the contract interface. While contracts are being tested, we can set up Supabase (Phase 2) in parallel since they're independent.
+
+Want to begin?
